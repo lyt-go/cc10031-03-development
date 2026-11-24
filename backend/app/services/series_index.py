@@ -69,6 +69,33 @@ class SeriesIndexService(BaseModuleService):
         return {"index_id": entry["索引编号"], "point": point_key,
                 "partition": partition, "indexed_count": written}
 
+    def locate_by_coverage(self, partition: str, coverage: dict[str, Any] | None = None) -> dict[str, Any]:
+        """按可回查覆盖结果定位序列数据：与归档回查视图保持相同的覆盖范围。
+
+        覆盖结果默认取当归档回查服务的实时计算，保证序列索引定位到的窗口
+        集合、保存位置与已归档标记和可回查范围视图完全一致。
+        """
+        if coverage is None:
+            from app.services import service_for
+            recall = service_for("archive_recall")
+            if recall is None or not hasattr(recall, "recallable_coverage"):
+                return {"error": "归档回查服务未登记，无法取得覆盖结果"}
+            coverage = recall.recallable_coverage(partition)
+        entries = []
+        for win in coverage.get("windows", []):
+            seq = int(win.get("窗口序号") or 0)
+            entries.append({
+                "索引编号": f"IDX-{partition}-{win['窗口编号']}",
+                "时间分区": partition,
+                "窗口编号": win["窗口编号"],
+                "窗口序号": seq,
+                "点区间": f"{(seq - 1) * 10 + 1}-{seq * 10}",
+                "存储位置": win["保存位置"],
+                "有效值": win["有效值"],
+                "已归档": win["已归档"],
+            })
+        return {"partition": partition, "coverage_count": len(entries), "entries": entries}
+
     def build_all_partitions(self, point_key: str) -> dict[str, Any]:
         """为指定测点构建所有时间分区的序列索引数据集。"""
         partitions = ["2026-09-01", "2026-09-02", "2026-09-03"]

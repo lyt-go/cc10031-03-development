@@ -68,6 +68,22 @@ npm run dev
 | 序列导出 | `series_export` | 导出任务 | 导出编号、测点范围、时间范围 |
 | 时序质量 | `series_quality` | 质量报告 | 报告编号、测点编号、统计窗口 |
 | 序列快照 | `series_snapshot` | 版本快照 | 快照编号、口径说明、测点范围 |
+| 归档回查 | `archive_recall` | 回查窗口 | 窗口编号、时间分区、保存位置 |
+
+## 归档回查视图
+
+`frontend/src/views/ArchiveRecallView.vue`（路由 `/archive-recall`）按时间分区展示序列
+可回查范围：每个窗口实际可回查的保存位置、尚待核验的副本，以及走单独入口的待核修订。
+配套接口在 `backend/app/routers/recall.py`（先于通用资源路由注册）：
+
+- `GET /api/archive_recall/coverage?partition=` 可回查范围视图（与序列索引同一覆盖结果）
+- `GET /api/archive_recall/dashboard` 归档看板（窗口位置 + 待核验副本 + 待核修订）
+- `POST /api/archive_recall/queries` → `POST /api/archive_recall/queries/{id}/read` 两段式范围查询
+- `POST /api/archive_recall/revisions/{id}/accept` 验收更正（未迁冷不算已归档）
+- `POST /api/archive_recall/checklists` 从未完成范围生成下一轮校验清单
+- `POST /api/archive_recall/verify` 逐项核验（失败注明窗口及副本）
+- `POST /api/archive_recall/recompute` 按返回索引重算，`resume=true` 时按上次已确认窗口续算
+- `GET /api/series_index/locate?partition=` 序列索引以相同覆盖结果定位数据
 
 ## 约定
 
